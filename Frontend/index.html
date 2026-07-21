@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusAI - Advanced Multi-Agent Research Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-group">
+        <div class="logo-icon">✨</div>
+        <div>
+          <h1 class="logo-title">NexusAI</h1>
+          <span class="logo-subtitle">Multi-Agent Research Intelligence</span>
+        </div>
+      </div>
+      
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="chat">💬 Research Agent</button>
+        <button class="nav-tab" data-tab="documents">📄 Document Store</button>
+        <button class="nav-tab" data-tab="reports">📝 Academic Reports</button>
+        <button class="nav-tab" data-tab="slides">📊 Presentation Slides</button>
+      </nav>
+
+      <div class="header-actions">
+        <div class="backend-status" id="backendStatus"><span class="status-dot"></span> Backend Active</div>
+        <button class="auth-btn" id="authBtn">Account / Login</button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+      <!-- TAB 1: Chat & Multi-Agent Workflow -->
+      <section class="tab-content active" id="tab-chat">
+        <!-- Agent Workflow Progress Banner -->
+        <div class="agent-pipeline-card">
+          <div class="pipeline-header">
+            <h3>LangGraph Multi-Agent Workflow State</h3>
+            <span class="badge" id="workflowStatusBadge">Ready</span>
+          </div>
+          <div class="agent-nodes">
+            <div class="node-card" id="node-planner">
+              <div class="node-icon">🧠</div>
+              <div class="node-name">Planner Agent</div>
+              <div class="node-desc">Query Decomposition</div>
+            </div>
+            <div class="node-arrow">➔</div>
+            <div class="node-card" id="node-research">
+              <div class="node-icon">📚</div>
+              <div class="node-name">Research Agent</div>
+              <div class="node-desc">Vector Store RAG</div>
+            </div>
+            <div class="node-card" id="node-web">
+              <div class="node-icon">🌐</div>
+              <div class="node-name">Web Agent</div>
+              <div class="node-desc">Live Search</div>
+            </div>
+            <div class="node-card" id="node-memory">
+              <div class="node-icon">💾</div>
+              <div class="node-name">Memory Agent</div>
+              <div class="node-desc">Chat Context</div>
+            </div>
+            <div class="node-card" id="node-citation">
+              <div class="node-icon">🔖</div>
+              <div class="node-name">Citation Agent</div>
+              <div class="node-desc">Ref Tagging</div>
+            </div>
+            <div class="node-arrow">➔</div>
+            <div class="node-card" id="node-critic">
+              <div class="node-icon">⚖️</div>
+              <div class="node-name">Critic Agent</div>
+              <div class="node-desc">Reflection & Retry</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages">
+            <div class="message assistant-message">
+              <div class="avatar">🤖</div>
+              <div class="bubble">
+                <p>Hello! I am your <strong>Advanced Multi-Agent Research Assistant</strong>. Ask me anything or select an uploaded paper to begin in-depth literature synthesis.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <div class="context-selector-bar">
+              <span>Selected Document Context:</span>
+              <select id="docSelector">
+                <option value="">All Uploaded Documents</option>
+              </select>
+            </div>
+            <div class="input-wrapper">
+              <textarea id="questionInput" placeholder="Ask a deep research question or request a synthesis..." rows="2"></textarea>
+              <button id="sendBtn" class="send-btn">Ask Agents ➔</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Document Management -->
+      <section class="tab-content" id="tab-documents">
+        <div class="upload-zone-card" id="dropZone">
+          <div class="upload-icon">📁</div>
+          <h2>Drag & Drop Research Papers (PDF, DOCX, TXT)</h2>
+          <p>Files are chunked, embedded, and indexed into FAISS for RAG retrieval.</p>
+          <input type="file" id="fileInput" accept=".pdf,.docx,.txt" style="display:none">
+          <button class="primary-btn" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+          <div class="progress-bar-container" id="uploadProgress" style="display:none">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h2>Ingested Document Knowledge Store</h2>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>Filename</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Chunks Indexed</th>
+                <th>Embedding Model</th>
+                <th>Uploaded</th>
+              </tr>
+            </thead>
+            <tbody id="docTableBody">
+              <tr>
+                <td colspan="6" style="text-align:center; color: var(--text-muted)">No documents uploaded yet. Upload a PDF above to get started.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 3: Academic Reports -->
+      <section class="tab-content" id="tab-reports">
+        <div class="report-creator-card">
+          <h2>Generate Academic Research Report</h2>
+          <div class="input-group">
+            <input type="text" id="reportTopicInput" placeholder="Enter research topic (e.g. Multi-Agent Systems in Healthcare)...">
+            <button class="primary-btn" id="generateReportBtn">Generate Markdown Report</button>
+          </div>
+        </div>
+        <div class="report-viewer-card" id="reportViewer">
+          <div class="empty-state">Enter a topic above to generate a full formal academic report.</div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Presentation Slides -->
+      <section class="tab-content" id="tab-slides">
+        <div class="slides-creator-card">
+          <h2>Generate Presentation Slide Deck</h2>
+          <div class="input-group">
+            <input type="text" id="slideTopicInput" placeholder="Enter presentation topic...">
+            <button class="primary-btn" id="generateSlidesBtn">Generate Slides</button>
+          </div>
+        </div>
+        <div class="slides-deck-viewer" id="slidesViewer">
+          <div class="empty-state">Enter a topic above to render interactive slides.</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Auth Modal -->
+    <div class="modal-backdrop" id="authModal" style="display:none">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>User Login & Signup</h2>
+          <button class="close-btn" id="closeAuthModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="auth-tabs">
+            <button class="auth-tab active" id="loginTab">Login</button>
+            <button class="auth-tab" id="signupTab">Signup</button>
+          </div>
+          <form id="authForm">
+            <div class="input-field" id="fullNameGroup" style="display:none">
+              <label>Full Name</label>
+              <input type="text" id="authFullName" placeholder="Dr. Jane Doe">
+            </div>
+            <div class="input-field">
+              <label>Email Address</label>
+              <input type="email" id="authEmail" placeholder="researcher@university.edu" required>
+            </div>
+            <div class="input-field">
+              <label>Password</label>
+              <input type="password" id="authPassword" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="primary-btn full-width" id="authSubmitBtn">Login</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment Variables & Secrets
+.env
+.env.local
+*.env
+
+# Local Databases & Upload Stores
+*.db
+ai_research.db
+Backend/uploads/
+Backend/vector_store/
+uploads/
+vector_store/
+*.index
+
+# IDE / System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
