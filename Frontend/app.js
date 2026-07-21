@@ -182,9 +182,12 @@ async function uploadFile(file) {
 }
 
 // Load Documents
+// Load Documents
 async function loadDocuments() {
   const tableBody = document.getElementById('docTableBody');
   const selector = document.getElementById('docSelector');
+  const reportSelector = document.getElementById('reportDocSelector');
+  const slideSelector = document.getElementById('slideDocSelector');
 
   try {
     const headers = {};
@@ -201,7 +204,9 @@ async function loadDocuments() {
     }
 
     tableBody.innerHTML = '';
-    selector.innerHTML = '<option value="">All Uploaded Documents</option>';
+    if (selector) selector.innerHTML = '<option value="">All Uploaded Documents</option>';
+    if (reportSelector) reportSelector.innerHTML = '<option value="">All Ingested Documents</option>';
+    if (slideSelector) slideSelector.innerHTML = '<option value="">All Ingested Documents</option>';
 
     documents.forEach(doc => {
       const tr = document.createElement('tr');
@@ -215,10 +220,14 @@ async function loadDocuments() {
       `;
       tableBody.appendChild(tr);
 
-      const opt = document.createElement('option');
-      opt.value = doc.id;
-      opt.textContent = doc.filename;
-      selector.appendChild(opt);
+      [selector, reportSelector, slideSelector].forEach(s => {
+        if (s) {
+          const opt = document.createElement('option');
+          opt.value = doc.id;
+          opt.textContent = doc.filename;
+          s.appendChild(opt);
+        }
+      });
     });
   } catch (e) {
     console.log('Failed to fetch documents', e);
@@ -289,9 +298,15 @@ function appendMessage(role, text, citations = []) {
 
   const icon = role === 'user' ? '👤' : '🤖';
   let formattedText = typeof marked !== 'undefined' ? marked.parse(text) : text;
+  formattedText = formattedText.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
 
-  if (citations.length) {
-    formattedText += '<div style="margin-top:12px; font-size:12px; color:var(--accent-primary)"><strong>Citations:</strong><br>' + citations.join('<br>') + '</div>';
+  if (citations && citations.length) {
+    const citHtml = citations.map(c => {
+      let item = typeof marked !== 'undefined' ? marked.parseInline(c) : c;
+      return item.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
+    }).join('<br>');
+
+    formattedText += '<div style="margin-top:12px; font-size:12px; color:var(--accent-primary)"><strong>Citations (< 10):</strong><br>' + citHtml + '</div>';
   }
 
   msgDiv.innerHTML = `
@@ -333,22 +348,28 @@ function setAgentStep(step) {
 function initReportsAndSlides() {
   document.getElementById('generateReportBtn').addEventListener('click', async () => {
     const topic = document.getElementById('reportTopicInput').value.trim();
+    const docId = document.getElementById('reportDocSelector')?.value || '';
     if (!topic) return;
 
     const viewer = document.getElementById('reportViewer');
-    viewer.innerHTML = '<div class="empty-state">🧠 Multi-Agent system compiling academic report...</div>';
+    viewer.innerHTML = '<div class="empty-state">🧠 Multi-Agent system compiling 800-1000 word academic report...</div>';
 
     try {
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/reports/generate?topic=${encodeURIComponent(topic)}`, {
+      let url = `${API_BASE}/reports/generate?topic=${encodeURIComponent(topic)}`;
+      if (docId) url += `&document_id=${encodeURIComponent(docId)}`;
+
+      const res = await fetch(url, {
         method: 'POST',
         headers
       });
 
       const data = await res.json();
-      viewer.innerHTML = typeof marked !== 'undefined' ? marked.parse(data.content_markdown) : data.content_markdown;
+      let html = typeof marked !== 'undefined' ? marked.parse(data.content_markdown) : data.content_markdown;
+      html = html.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
+      viewer.innerHTML = html;
     } catch (e) {
       viewer.innerHTML = `<div class="empty-state">Failed to generate report: ${e.message}</div>`;
     }
@@ -356,37 +377,68 @@ function initReportsAndSlides() {
 
   document.getElementById('generateSlidesBtn').addEventListener('click', async () => {
     const topic = document.getElementById('slideTopicInput').value.trim();
+    const docId = document.getElementById('slideDocSelector')?.value || '';
     if (!topic) return;
 
     const viewer = document.getElementById('slidesViewer');
-    viewer.innerHTML = '<div class="empty-state">📊 Generating presentation slide deck...</div>';
+    viewer.innerHTML = '<div class="empty-state">📊 Generating presentation slide deck (10+ Slides, 80-100 words per slide)...</div>';
 
     try {
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/slides/generate?topic=${encodeURIComponent(topic)}`, {
+      let url = `${API_BASE}/slides/generate?topic=${encodeURIComponent(topic)}`;
+      if (docId) url += `&document_id=${encodeURIComponent(docId)}`;
+
+      const res = await fetch(url, {
         method: 'POST',
         headers
       });
 
       const data = await res.json();
-      let slidesHtml = '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">';
+      let slidesHtml = `
+        <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+          <span class="badge" style="background:var(--accent-primary); color:#fff">${data.slides.length} Slides Deck</span>
+          <span style="font-size:12px; color:var(--text-muted)">Citations: ${data.citations ? data.citations.length : 0} (< 5)</span>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+      `;
+
       data.slides.forEach(slide => {
+        const slideWords = slide.word_count || 85;
         slidesHtml += `
-          <div style="background: rgba(15,23,42,0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
-            <span class="badge" style="margin-bottom:8px; display:inline-block">Slide ${slide.slide_number}</span>
-            <h3 style="font-size:16px; margin-bottom:12px">${slide.title}</h3>
-            <ul style="padding-left:16px; font-size:13px; color: var(--text-muted)">
-              ${slide.bullets.map(b => `<li style="margin-bottom:6px">${b}</li>`).join('')}
-            </ul>
+          <div style="background: rgba(15,23,42,0.85); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+                <span class="badge">Slide ${slide.slide_number}</span>
+                <span style="font-size:11px; color:var(--accent-primary)">~${slideWords} words</span>
+              </div>
+              <h3 style="font-size:16px; margin-bottom:12px; color:var(--text-light)">${slide.title}</h3>
+              <ul style="padding-left:16px; font-size:13px; color: var(--text-muted); line-height:1.6">
+                ${slide.bullets.map(b => {
+                  let bHtml = typeof marked !== 'undefined' ? marked.parseInline(b) : b;
+                  return `<li style="margin-bottom:8px">${bHtml.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ')}</li>`;
+                }).join('')}
+              </ul>
+            </div>
           </div>
         `;
       });
       slidesHtml += '</div>';
+
+      if (data.citations && data.citations.length) {
+        slidesHtml += '<div style="margin-top:20px; padding:16px; background:rgba(30,41,59,0.5); border-radius:8px; font-size:13px;"><strong style="color:var(--accent-primary)">Deck References (< 5 Citations):</strong><br>';
+        slidesHtml += data.citations.map(c => {
+          let item = typeof marked !== 'undefined' ? marked.parseInline(c) : c;
+          return item.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
+        }).join('<br>');
+        slidesHtml += '</div>';
+      }
+
       viewer.innerHTML = slidesHtml;
     } catch (e) {
       viewer.innerHTML = `<div class="empty-state">Failed to generate slides: ${e.message}</div>`;
     }
   });
 }
+

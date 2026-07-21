@@ -23,9 +23,12 @@ class EmbeddingService:
 
         try:
             from sentence_transformers import SentenceTransformer
-            logger.info(f"Loading SentenceTransformer model: {self.model_name}")
-            self._model = SentenceTransformer(self.model_name)
-            self._dimension = self._model.get_sentence_embedding_dimension()
+            model_inst = SentenceTransformer(self.model_name)
+            self._model = model_inst
+            if hasattr(model_inst, "get_embedding_dimension"):
+                self._dimension = model_inst.get_embedding_dimension()
+            else:
+                self._dimension = model_inst.get_sentence_embedding_dimension()
         except Exception as e:
             logger.warning(f"Failed to load SentenceTransformer ({e}). Using lightweight fallback encoder.")
             self._model = "fallback"

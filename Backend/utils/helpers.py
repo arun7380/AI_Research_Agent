@@ -39,7 +39,15 @@ def current_timestamp() -> datetime:
 ALLOWED_EXTENSIONS = {
     ".pdf",
     ".docx",
-    ".txt"
+    ".txt",
+    ".md",
+    ".csv",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".bmp",
+    ".tiff",
 }
 
 

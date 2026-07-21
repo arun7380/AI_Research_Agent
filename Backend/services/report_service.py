@@ -5,29 +5,33 @@ from sqlalchemy.orm import Session
 
 def generate_research_report(topic: str, document_id: str = None, user_id: str = None, db: Session = None) -> Dict[str, Any]:
     """
-    Generates a structured multi-page markdown research report on a topic using the multi-agent system.
+    Generates a structured 800 to 1000 word academic markdown research report using the multi-agent system.
+    Citations are capped at < 10 with clickable hyperlinks.
     """
     agent_output = workflow.run(
-        question=f"Generate a comprehensive, formal academic research report on: {topic}",
+        question=f"Generate a comprehensive, formal academic research report of 800 to 1000 words on: {topic}",
         user_id=user_id,
         document_id=document_id,
-        db=db
+        db=db,
+        mode="report"
     )
 
-    report_markdown = (
-        f"# Research Report: {topic}\n\n"
-        f"## Executive Summary\n{agent_output.get('answer')[:400]}...\n\n"
-        f"## Detailed Analysis & Findings\n{agent_output.get('answer')}\n\n"
-        f"## Works Cited & References\n"
-    )
+    answer_text = agent_output.get("answer", "")
+    citations = agent_output.get("citations", [])[:9]  # strictly < 10
 
-    for cit in agent_output.get("citations", []):
-        report_markdown += f"- {cit}\n"
+    # Ensure structured markdown formatting with references
+    report_markdown = answer_text
+
+    if citations and "## Works Cited & References" not in report_markdown and "## References" not in report_markdown:
+        report_markdown += "\n\n## Works Cited & References\n"
+        for cit in citations:
+            report_markdown += f"- {cit}\n"
 
     return {
-        "title": f"Research Report: {topic}",
+        "title": f"Academic Research Report: {topic}",
         "topic": topic,
         "content_markdown": report_markdown,
-        "citations": agent_output.get("citations", []),
-        "sources": agent_output.get("sources", [])
+        "citations": citations,
+        "sources": agent_output.get("sources", [])[:9]
     }
+

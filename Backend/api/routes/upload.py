@@ -25,7 +25,7 @@ def upload_file(
     if not is_allowed_file(file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File extension not supported. Please upload PDF, DOCX, or TXT.",
+            detail="File extension not supported. Please upload PDF, DOCX, TXT, or Image files (PNG, JPG, WEBP).",
         )
 
     try:

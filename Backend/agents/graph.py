@@ -48,7 +48,15 @@ class ResearchAgentWorkflow:
         self.critic_agent = CriticAgent()
         self.llm = LLMService()
 
-    def run(self, question: str, user_id: str = None, document_id: str = None, db: Session = None, max_retries: int = 2) -> Dict[str, Any]:
+    def run(
+        self,
+        question: str,
+        user_id: str = None,
+        document_id: str = None,
+        db: Session = None,
+        mode: str = "research",
+        max_retries: int = 1
+    ) -> Dict[str, Any]:
         state: AgentState = {
             "question": question,
             "user_id": user_id,
@@ -69,6 +77,8 @@ class ResearchAgentWorkflow:
             "final_answer": ""
         }
 
+        max_citations = 4 if mode == "slides" else 9
+
         while state["retry_count"] <= max_retries:
             # 1. Planner Node
             plan_res = self.planner.plan(state["question"], feedback=state["critic_feedback"])
@@ -83,13 +93,17 @@ class ResearchAgentWorkflow:
             state["web_results"] = self.web_agent.search(sub_queries=state["sub_queries"])
             state["memory_context"] = self.memory_agent.get_context(
                 user_id=state["user_id"],
-                db=state["db"]
+                db=state["db"],
+                query=state["question"],
+                document_id=state["document_id"],
+                mode=mode
             )
 
             # 3. Citation Agent Node
             cit_res = self.citation_agent.process(
                 doc_chunks=state["doc_chunks"],
-                web_results=state["web_results"]
+                web_results=state["web_results"],
+                max_citations=max_citations
             )
             state["citations"] = cit_res["citations"]
             state["sources"] = cit_res["sources"]
@@ -113,16 +127,34 @@ class ResearchAgentWorkflow:
 
             state["compiled_context"] = "\n\n".join(context_parts)
 
-            # 5. LLM Generator Node
-            system_prompt = (
-                "You are an Advanced AI Research Assistant. Provide a detailed, accurate, "
-                "well-structured academic response based on the compiled context. Include citation numbers."
-            )
+            # 5. LLM Generator Node (with explicit length and citation mode prompts)
+            if mode == "report":
+                system_prompt = (
+                    "You are a Senior Academic Researcher. Write a formal, rigorous, comprehensive research report "
+                    "strictly between 800 and 1000 words. Divide the report into well-structured Markdown sections: "
+                    "# Title, ## Executive Summary, ## Introduction & Background, ## Literature Review & Methodology, "
+                    "## Detailed Analysis & Findings, ## Critical Discussion, ## Conclusion. "
+                    "Ground your analysis strictly in the provided research context and include less than 10 citations."
+                )
+            elif mode == "slides":
+                system_prompt = (
+                    "You are an Executive Academic Presenter. Generate detailed presentation slide deck content. "
+                    "Provide at least 10 slides. Each slide MUST contain 80 to 100 words of comprehensive bullet points "
+                    "and explanatory narratives. Keep total citations across all slides under 5."
+                )
+            else:
+                system_prompt = (
+                    "You are an Advanced AI Research Assistant. Provide a detailed, accurate research response "
+                    "strictly between 200 and 300 words. Ground your answer in the provided context and include "
+                    "less than 10 citations with reference tags [1], [2], etc."
+                )
+
             gen_prompt = (
-                f"Question: {state['question']}\n\n"
+                f"MODE: {mode.upper()}\n"
+                f"Question / Topic: {state['question']}\n\n"
                 f"Research Context:\n{state['compiled_context']}\n\n"
                 f"Citations Available:\n" + "\n".join(state['citations']) + "\n\n"
-                "Formulate a complete research answer with citation tags."
+                "Formulate your complete answer strictly following the required length, structure, and citation format."
             )
             state["candidate_answer"] = self.llm.generate(gen_prompt, system_instruction=system_prompt)
 

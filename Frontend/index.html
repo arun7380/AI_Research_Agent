@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NexusAI - Advanced Multi-Agent Research Assistant</title>
+  <title>AdvearchAI - Advanced Multi-Agent Research Assistant</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
+
 <body>
   <div class="app-container">
     <!-- Header -->
@@ -17,11 +21,11 @@
       <div class="logo-group">
         <div class="logo-icon">✨</div>
         <div>
-          <h1 class="logo-title">NexusAI</h1>
+          <h1 class="logo-title">AdvearchAI</h1>
           <span class="logo-subtitle">Multi-Agent Research Intelligence</span>
         </div>
       </div>
-      
+
       <nav class="nav-tabs">
         <button class="nav-tab active" data-tab="chat">💬 Research Agent</button>
         <button class="nav-tab" data-tab="documents">📄 Document Store</button>
@@ -87,7 +91,8 @@
             <div class="message assistant-message">
               <div class="avatar">🤖</div>
               <div class="bubble">
-                <p>Hello! I am your <strong>Advanced Multi-Agent Research Assistant</strong>. Ask me anything or select an uploaded paper to begin in-depth literature synthesis.</p>
+                <p>Hello! I am your <strong>Advanced Multi-Agent Research Assistant</strong>. Ask me anything or select
+                  an uploaded paper to begin in-depth literature synthesis.</p>
               </div>
             </div>
           </div>
@@ -100,7 +105,8 @@
               </select>
             </div>
             <div class="input-wrapper">
-              <textarea id="questionInput" placeholder="Ask a deep research question or request a synthesis..." rows="2"></textarea>
+              <textarea id="questionInput" placeholder="Ask a deep research question or request a synthesis..."
+                rows="2"></textarea>
               <button id="sendBtn" class="send-btn">Ask Agents ➔</button>
             </div>
           </div>
@@ -111,9 +117,9 @@
       <section class="tab-content" id="tab-documents">
         <div class="upload-zone-card" id="dropZone">
           <div class="upload-icon">📁</div>
-          <h2>Drag & Drop Research Papers (PDF, DOCX, TXT)</h2>
-          <p>Files are chunked, embedded, and indexed into FAISS for RAG retrieval.</p>
-          <input type="file" id="fileInput" accept=".pdf,.docx,.txt" style="display:none">
+          <h2>Drag & Drop Research Papers & Images (PDF, Image PDFs, PNG, JPG, DOCX, TXT)</h2>
+          <p>Scanned PDFs and image features are extracted via OCR and indexed into FAISS for RAG retrieval.</p>
+          <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp,.bmp,.tiff" style="display:none">
           <button class="primary-btn" onclick="document.getElementById('fileInput').click()">Browse Files</button>
           <div class="progress-bar-container" id="uploadProgress" style="display:none">
             <div class="progress-bar" id="progressBar"></div>
@@ -135,7 +141,8 @@
             </thead>
             <tbody id="docTableBody">
               <tr>
-                <td colspan="6" style="text-align:center; color: var(--text-muted)">No documents uploaded yet. Upload a PDF above to get started.</td>
+                <td colspan="6" style="text-align:center; color: var(--text-muted)">No documents uploaded yet. Upload a
+                  PDF above to get started.</td>
               </tr>
             </tbody>
           </table>
@@ -145,9 +152,16 @@
       <!-- TAB 3: Academic Reports -->
       <section class="tab-content" id="tab-reports">
         <div class="report-creator-card">
-          <h2>Generate Academic Research Report</h2>
+          <h2>Generate Academic Research Report (800-1000 Words)</h2>
+          <div class="context-selector-bar" style="margin-bottom:12px">
+            <span>Select Document Context:</span>
+            <select id="reportDocSelector">
+              <option value="">All Ingested Documents</option>
+            </select>
+          </div>
           <div class="input-group">
-            <input type="text" id="reportTopicInput" placeholder="Enter research topic (e.g. Multi-Agent Systems in Healthcare)...">
+            <input type="text" id="reportTopicInput"
+              placeholder="Enter research topic (e.g. Multi-Agent Systems in Healthcare)...">
             <button class="primary-btn" id="generateReportBtn">Generate Markdown Report</button>
           </div>
         </div>
@@ -159,7 +173,13 @@
       <!-- TAB 4: Presentation Slides -->
       <section class="tab-content" id="tab-slides">
         <div class="slides-creator-card">
-          <h2>Generate Presentation Slide Deck</h2>
+          <h2>Generate Presentation Slide Deck (10+ Slides, 80-100 Words Each)</h2>
+          <div class="context-selector-bar" style="margin-bottom:12px">
+            <span>Select Document Context:</span>
+            <select id="slideDocSelector">
+              <option value="">All Ingested Documents</option>
+            </select>
+          </div>
           <div class="input-group">
             <input type="text" id="slideTopicInput" placeholder="Enter presentation topic...">
             <button class="primary-btn" id="generateSlidesBtn">Generate Slides</button>
@@ -169,6 +189,7 @@
           <div class="empty-state">Enter a topic above to render interactive slides.</div>
         </div>
       </section>
+
     </main>
 
     <!-- Auth Modal -->
@@ -205,4 +226,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>

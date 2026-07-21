@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 ### Project root directory
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -16,12 +16,14 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(BASE_DIR / ".env", ".env"),
         env_file_encoding="utf-8",
-        case_sensitive=False,
         extra="ignore",
     )
-### Application
+
+    BASE_DIR: Path = BASE_DIR
+
+    ### Application
 
     APP_NAME: str = "AI Research Assistant"
     APP_VERSION: str = "1.0.0"
