@@ -4,6 +4,9 @@ from pathlib import Path
 
 # Ensure Backend directory is in sys.path for top-level module resolution
 BACKEND_DIR = Path(__file__).resolve().parent
+BASE_DIR = BACKEND_DIR.parent
+FRONTEND_DIR = BASE_DIR / "Frontend"
+
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
@@ -12,6 +15,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.routes import auth, chat, report, slides, upload
 from config.settings import settings
@@ -42,11 +46,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS Setup
+# Robust CORS Setup allowing file:// protocol (null origin) and dev servers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=[
+        "*",
+        "null",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -59,6 +71,10 @@ app.include_router(report.router, prefix="/api/v1")
 app.include_router(slides.router, prefix="/api/v1")
 app.include_router(chat_ws.router)
 
+# Mount Frontend static dashboard at /app
+if FRONTEND_DIR.exists():
+    app.mount("/app", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+
 
 @app.get("/")
 def root():
@@ -66,7 +82,8 @@ def root():
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "status": "online",
-        "docs_url": "/docs",
+        "frontend_url": "http://localhost:8000/app",
+        "docs_url": "http://localhost:8000/docs",
     }
 
 

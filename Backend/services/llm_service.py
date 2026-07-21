@@ -1,10 +1,39 @@
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
-from config.settings import settings
+from config.settings import BASE_DIR, settings
 
 logger = logging.getLogger(__name__)
+
+
+def get_fresh_env_key(key_name: str) -> Optional[str]:
+    """
+    Reads API key dynamically from environment or .env file to bypass lru_cache stale state.
+    """
+    # 1. Try os.environ
+    val = os.environ.get(key_name)
+
+    # 2. Try settings object
+    if not val:
+        val = getattr(settings, key_name, None)
+
+    # 3. Direct .env file parser fallback
+    if not val or str(val).strip().startswith("your_"):
+        env_path = Path(BASE_DIR) / ".env"
+        if env_path.exists():
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line.startswith(f"{key_name}="):
+                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
+
+    if not val:
+        return None
+
+    cleaned = str(val).strip().strip('"').strip("'")
+    return cleaned if cleaned and not cleaned.startswith("your_") else None
 
 
 class LLMService:
@@ -19,11 +48,30 @@ class LLMService:
         """
         Generate response text for prompt using available LLM API provider.
         """
-        # Try Google Gemini if key is provided or default
-        google_key = settings.GOOGLE_API_KEY or os.environ.get("GOOGLE_API_KEY")
-        openai_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY")
-        groq_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY")
+        google_key = get_fresh_env_key("GOOGLE_API_KEY")
+        openai_key = get_fresh_env_key("OPENAI_API_KEY")
+        groq_key = get_fresh_env_key("GROQ_API_KEY")
 
+        # 1. Try Groq (Ultra-fast & reliable for Llama models)
+        if groq_key:
+            for model_name in ["llama-3.3-70b-versatile", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma2-9b-it"]:
+                try:
+                    from openai import OpenAI
+                    client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=groq_key)
+                    messages = []
+                    if system_instruction:
+                        messages.append({"role": "system", "content": system_instruction})
+                    messages.append({"role": "user", "content": prompt})
+                    res = client.chat.completions.create(
+                        model=model_name,
+                        messages=messages,
+                        temperature=temperature
+                    )
+                    return res.choices[0].message.content
+                except Exception as e:
+                    logger.warning(f"Groq generation with {model_name} failed: {e}")
+
+        # 2. Try Google Gemini
         if google_key:
             try:
                 import google.generativeai as genai
@@ -38,6 +86,7 @@ class LLMService:
             except Exception as e:
                 logger.warning(f"Google Gemini generation failed: {e}")
 
+        # 3. Try OpenAI
         if openai_key:
             try:
                 from openai import OpenAI
@@ -55,29 +104,12 @@ class LLMService:
             except Exception as e:
                 logger.warning(f"OpenAI generation failed: {e}")
 
-        if groq_key:
-            try:
-                from openai import OpenAI
-                client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=groq_key)
-                messages = []
-                if system_instruction:
-                    messages.append({"role": "system", "content": system_instruction})
-                messages.append({"role": "user", "content": prompt})
-                res = client.chat.completions.create(
-                    model="llama-3.1-70b-versatile",
-                    messages=messages,
-                    temperature=temperature
-                )
-                return res.choices[0].message.content
-            except Exception as e:
-                logger.warning(f"Groq generation failed: {e}")
-
-        # Fallback intelligent local rule-based response synthesizer if no keys configured
+        # Fallback intelligent local rule-based response synthesizer if no keys configured or invalid
         return self._local_fallback_generation(prompt, system_instruction)
 
     def _local_fallback_generation(self, prompt: str, system_instruction: Optional[str]) -> str:
         """
-        Rule-based contextual fallback synthesizer when API keys are not present.
+        Rule-based contextual fallback synthesizer when API keys are not present or invalid.
         """
         if "CRITIC EVALUATION" in prompt:
             return "DECISION: GOOD\nFEEDBACK: The research answer is well-structured, grounded in provided document context, and includes citations."
@@ -86,5 +118,5 @@ class LLMService:
             "Based on the provided research context and document analysis:\n\n"
             "1. **Key Findings**: The document highlights critical Insights, structural properties, and detailed metadata.\n"
             "2. **Context Analysis**: Extracted citations confirm valid document sources and relevance to your query.\n\n"
-            "*(Note: Provide your GOOGLE_API_KEY or OPENAI_API_KEY in `.env` for full AI model capabilities)*"
+            "*(Note: Provide a valid GOOGLE_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY in `.env` for full AI model capabilities)*"
         )
